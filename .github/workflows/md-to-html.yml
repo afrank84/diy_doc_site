@@ -1,0 +1,36 @@
+name: Convert Markdown to HTML
+
+on:
+  push:
+    paths:
+      - "docs/**"                   # Trigger only when Markdown files in docs are updated
+
+jobs:
+  convert-md-to-html:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Convert Markdown to HTML
+        run: |
+          mkdir -p static
+          for md_file in $(find docs -type f -name "*.md"); do
+            html_file="static/${md_file#docs/}"
+            html_file="${html_file%.md}.html"
+            mkdir -p $(dirname $html_file)
+            npx markdown-it $md_file > content.html
+            sed '/<!--CONTENT_PLACEHOLDER-->/{
+              r content.html
+              d
+            }' template.html > $html_file
+          done
+
+      - name: Commit and Push Generated HTML
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add static/
+          git commit -m "Update generated HTML files"
+          git push
